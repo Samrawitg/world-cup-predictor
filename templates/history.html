@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History | WC Predictor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0e1a;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        nav {
+            background: #111827;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #1e3a5f;
+        }
+
+        nav .logo { font-size: 1.4rem; font-weight: 700; color: #f4c430; }
+        nav a { color: #ccc; text-decoration: none; margin-left: 2rem; font-size: 0.95rem; }
+        nav a:hover { color: #f4c430; }
+
+        .page-header {
+            text-align: center;
+            padding: 3rem 2rem 1.5rem;
+        }
+
+        .page-header h1 { font-size: 2rem; color: #f4c430; margin-bottom: 0.5rem; }
+        .page-header p  { color: #889; font-size: 0.95rem; }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+
+        /* Stats row */
+        .stats-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 12px;
+            padding: 1.2rem 1.5rem;
+            flex: 1;
+            min-width: 160px;
+            text-align: center;
+        }
+
+        .stat-card .val { font-size: 2rem; font-weight: 700; color: #f4c430; }
+        .stat-card .lbl { font-size: 0.8rem; color: #667; margin-top: 0.3rem; }
+
+        /* Charts grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-box {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .chart-box h2 { font-size: 0.95rem; color: #f4c430; margin-bottom: 1rem; }
+        .chart-box.wide { grid-column: span 2; }
+
+        /* Tournament table */
+        .table-box {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-box h2 {
+            font-size: 1rem;
+            color: #f4c430;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #1e3a5f;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            background: #0d1525;
+            padding: 0.7rem 1rem;
+            font-size: 0.78rem;
+            color: #667;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        td { padding: 0.7rem 1rem; font-size: 0.88rem; border-bottom: 1px solid #1a2535; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #1a2535; }
+
+        .winner-cell { color: #f4c430; font-weight: 600; }
+        .host-win { background: #1a2a1a !important; }
+
+        @media (max-width: 700px) {
+            .charts-grid { grid-template-columns: 1fr; }
+            .chart-box.wide { grid-column: span 1; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <span class="logo">⚽ WC2026 Predictor</span>
+    <div>
+        <a href="/">Home</a>
+        <a href="/predictions">Predictions</a>
+        <a href="/history">History</a>
+        <a href="/live">Live Tracker</a>
+    </div>
+</nav>
+
+<div class="page-header">
+    <h1>📖 World Cup History (1930–2022)</h1>
+    <p>Every tournament, every winner — the data behind the predictions</p>
+</div>
+
+<div class="container">
+
+    <!-- Quick stats -->
+    <div class="stats-row" id="statsRow">
+        <div class="stat-card"><div class="val">22</div><div class="lbl">Tournaments</div></div>
+        <div class="stat-card"><div class="val" id="statGoals">—</div><div class="lbl">Total Goals Scored</div></div>
+        <div class="stat-card"><div class="val" id="statHost">—</div><div class="lbl">Host Nations Won</div></div>
+        <div class="stat-card"><div class="val" id="statTop">—</div><div class="lbl">Most Successful Nation</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+        <div class="chart-box">
+            <h2>🥇 Wins by Country</h2>
+            <canvas id="winsChart"></canvas>
+        </div>
+        <div class="chart-box">
+            <h2>🌍 Wins by Confederation</h2>
+            <canvas id="confChart"></canvas>
+        </div>
+        <div class="chart-box wide">
+            <h2>⚽ Average Goals per Match Over Time</h2>
+            <canvas id="goalsChart" height="60"></canvas>
+        </div>
+    </div>
+
+    <!-- Full tournament table -->
+    <div class="table-box">
+        <h2>📋 All Tournaments</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>Host</th>
+                    <th>Winner</th>
+                    <th>Runner Up</th>
+                    <th>Third Place</th>
+                    <th>Goals</th>
+                    <th>Matches</th>
+                    <th>Avg Goals</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+const flagMap = {
+    "Uruguay":"🇺🇾","Italy":"🇮🇹","France":"🇫🇷","Brazil":"🇧🇷","West Germany":"🇩🇪",
+    "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Germany":"🇩🇪","Argentina":"🇦🇷","Spain":"🇪🇸","Croatia":"🇭🇷",
+    "South Africa":"🇿🇦","Russia":"🇷🇺","Qatar":"🇶🇦","Sweden":"🇸🇪","Chile":"🇨🇱",
+    "Mexico":"🇲🇽","Switzerland":"🇨🇭","USA":"🇺🇸","South Korea/Japan":"🇰🇷🇯🇵"
+};
+
+async function loadHistory() {
+    const [histRes, statsRes] = await Promise.all([
+        fetch("/api/history"),
+        fetch("/api/stats")
+    ]);
+    const history = await histRes.json();
+    const stats   = await statsRes.json();
+
+    // ── Quick stats ──
+    const totalGoals = history.reduce((s, t) => s + t.goals_scored, 0);
+    const hostWins   = history.filter(t => t.host_won).length;
+    document.getElementById("statGoals").textContent = totalGoals.toLocaleString();
+    document.getElementById("statHost").textContent  = `${hostWins} / 22`;
+    document.getElementById("statTop").textContent   = stats[0].winner;
+
+    // ── Wins by country chart ──
+    const top8 = stats.slice(0, 8);
+    new Chart(document.getElementById("winsChart"), {
+        type: "bar",
+        data: {
+            labels: top8.map(s => (flagMap[s.winner] || "") + " " + s.winner),
+            datasets: [{
+                data: top8.map(s => s.wins),
+                backgroundColor: top8.map((_, i) => i === 0 ? "#f4c430" : "#2a4a7f"),
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: "#aaa", font: { size: 11 } }, grid: { color: "#1e3a5f" } },
+                y: { ticks: { color: "#aaa", stepSize: 1 }, grid: { color: "#1e3a5f" } }
+            }
+        }
+    });
+
+    // ── Confederation pie ──
+    const confCounts = {};
+    history.forEach(t => {
+        confCounts[t.winner_confederation] = (confCounts[t.winner_confederation] || 0) + 1;
+    });
+    new Chart(document.getElementById("confChart"), {
+        type: "doughnut",
+        data: {
+            labels: Object.keys(confCounts),
+            datasets: [{
+                data: Object.values(confCounts),
+                backgroundColor: ["#4C72B0","#DD8452","#55A868","#C44E52","#8172B2"],
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { labels: { color: "#aaa", font: { size: 11 } } }
+            }
+        }
+    });
+
+    // ── Goals over time ──
+    new Chart(document.getElementById("goalsChart"), {
+        type: "line",
+        data: {
+            labels: history.map(t => t.year),
+            datasets: [{
+                label: "Avg Goals / Match",
+                data: history.map(t => t.avg_goals_per_match),
+                borderColor: "#f4c430",
+                backgroundColor: "#f4c43020",
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: "#f4c430",
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: "#aaa" }, grid: { color: "#1e3a5f" } },
+                y: { ticks: { color: "#aaa" }, grid: { color: "#1e3a5f" } }
+            }
+        }
+    });
+
+    // ── Tournament table ──
+    const tbody = document.getElementById("tableBody");
+    history.slice().reverse().forEach(t => {
+        const isHostWin = t.host_won;
+        tbody.innerHTML += `
+            <tr class="${isHostWin ? "host-win" : ""}">
+                <td><strong>${t.year}</strong></td>
+                <td>${flagMap[t.host] || ""} ${t.host}</td>
+                <td class="winner-cell">${flagMap[t.winner] || ""} ${t.winner} ${isHostWin ? "🏠" : ""}</td>
+                <td>${t.runner_up}</td>
+                <td>${t.third_place}</td>
+                <td>${t.goals_scored}</td>
+                <td>${t.matches}</td>
+                <td>${t.avg_goals_per_match}</td>
+            </tr>`;
+    });
+}
+
+loadHistory();
+</script>
+</body>
+</html>

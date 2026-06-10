@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 Predictions | WC Predictor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0e1a;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        nav {
+            background: #111827;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #1e3a5f;
+        }
+
+        nav .logo { font-size: 1.4rem; font-weight: 700; color: #f4c430; }
+        nav a { color: #ccc; text-decoration: none; margin-left: 2rem; font-size: 0.95rem; }
+        nav a:hover { color: #f4c430; }
+
+        .page-header {
+            text-align: center;
+            padding: 3rem 2rem 1.5rem;
+        }
+
+        .page-header h1 { font-size: 2rem; color: #f4c430; margin-bottom: 0.5rem; }
+        .page-header p  { color: #889; font-size: 0.95rem; }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+
+        /* Top 3 podium */
+        .podium {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .podium-card {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 12px;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .podium-card:hover { transform: translateY(-4px); }
+        .podium-card.first  { width: 200px; border-color: #f4c430; }
+        .podium-card.second { width: 170px; }
+        .podium-card.third  { width: 170px; }
+
+        .podium-card .medal  { font-size: 2rem; margin-bottom: 0.5rem; }
+        .podium-card .flag   { font-size: 2.5rem; margin-bottom: 0.4rem; }
+        .podium-card .name   { font-size: 1rem; font-weight: 600; margin-bottom: 0.3rem; }
+        .podium-card .prob   { font-size: 1.4rem; font-weight: 700; color: #f4c430; }
+        .podium-card .conf   { font-size: 0.75rem; color: #667; margin-top: 0.3rem; }
+
+        /* Chart */
+        .chart-box {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-box h2 { font-size: 1rem; color: #f4c430; margin-bottom: 1rem; }
+
+        /* Full table */
+        .table-box {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-box h2 {
+            font-size: 1rem;
+            color: #f4c430;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #1e3a5f;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th {
+            background: #0d1525;
+            padding: 0.7rem 1rem;
+            font-size: 0.78rem;
+            color: #667;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td { padding: 0.7rem 1rem; font-size: 0.88rem; border-bottom: 1px solid #1a2535; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #1a2535; }
+
+        .rank-num { color: #667; font-size: 0.8rem; }
+        .team-name { font-weight: 500; }
+        .prob-bar-wrap { display: flex; align-items: center; gap: 8px; }
+        .prob-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: #f4c430;
+            min-width: 2px;
+        }
+        .prob-text { font-size: 0.82rem; color: #f4c430; font-weight: 600; min-width: 42px; }
+        .host-badge {
+            background: #1e3a5f;
+            color: #7ab3f0;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #667;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <span class="logo">⚽ WC2026 Predictor</span>
+    <div>
+        <a href="/">Home</a>
+        <a href="/predictions">Predictions</a>
+        <a href="/history">History</a>
+        <a href="/live">Live Tracker</a>
+    </div>
+</nav>
+
+<div class="page-header">
+    <h1>🏆 2026 World Cup Predictions</h1>
+    <p>ML model trained on 22 tournaments (1930–2022) · Factors: history, FIFA rank, host advantage, confederation</p>
+</div>
+
+<div class="container">
+    <div id="loading" class="loading">Loading predictions...</div>
+
+    <!-- Top 3 Podium -->
+    <div class="podium" id="podium" style="display:none"></div>
+
+    <!-- Bar Chart Top 10 -->
+    <div class="chart-box" id="chartBox" style="display:none">
+        <h2>📊 Top 10 Win Probabilities</h2>
+        <canvas id="probChart" height="100"></canvas>
+    </div>
+
+    <!-- Full Table -->
+    <div class="table-box" id="tableBox" style="display:none">
+        <h2>🌍 All 48 Qualified Teams</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Team</th>
+                    <th>Confederation</th>
+                    <th>WC Wins</th>
+                    <th>FIFA Rank</th>
+                    <th>Win Probability</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const flagMap = {
+    "Argentina":"🇦🇷","Brazil":"🇧🇷","France":"🇫🇷","Germany":"🇩🇪","Spain":"🇪🇸",
+    "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Netherlands":"🇳🇱","Portugal":"🇵🇹","Italy":"🇮🇹","Belgium":"🇧🇪",
+    "Croatia":"🇭🇷","Uruguay":"🇺🇾","Colombia":"🇨🇴","Mexico":"🇲🇽","USA":"🇺🇸",
+    "Canada":"🇨🇦","Japan":"🇯🇵","South Korea":"🇰🇷","Morocco":"🇲🇦","Senegal":"🇸🇳",
+    "Denmark":"🇩🇰","Switzerland":"🇨🇭","Poland":"🇵🇱","Serbia":"🇷🇸","Austria":"🇦🇹",
+    "Turkey":"🇹🇷","Ecuador":"🇪🇨","Chile":"🇨🇱","Iran":"🇮🇷","Australia":"🇦🇺",
+    "Nigeria":"🇳🇬","Egypt":"🇪🇬","Saudi Arabia":"🇸🇦","Costa Rica":"🇨🇷","Paraguay":"🇵🇾",
+    "Venezuela":"🇻🇪","Bolivia":"🇧🇴","Peru":"🇵🇪","Jamaica":"🇯🇲","Panama":"🇵🇦",
+    "Honduras":"🇭🇳","Uzbekistan":"🇺🇿","Hungary":"🇭🇺","Romania":"🇷🇴","Albania":"🇦🇱",
+    "Slovakia":"🇸🇰","Greece":"🇬🇷","Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Czech Republic":"🇨🇿"
+};
+
+const medals = ["🥇","🥈","🥉"];
+
+async function loadPredictions() {
+    const res  = await fetch("/api/predictions");
+    const data = await res.json();
+
+    document.getElementById("loading").style.display = "none";
+
+    // ── Podium (top 3) ──
+    const podium   = document.getElementById("podium");
+    const order    = [1, 0, 2]; // silver, gold, bronze layout
+    const classes  = ["second","first","third"];
+    order.forEach((i, j) => {
+        const t = data[i];
+        podium.innerHTML += `
+            <div class="podium-card ${classes[j]}">
+                <div class="medal">${medals[i]}</div>
+                <div class="flag">${flagMap[t.team] || "🏳"}</div>
+                <div class="name">${t.team}</div>
+                <div class="prob">${t.win_probability}%</div>
+                <div class="conf">${t.confederation}${t.host_2026 ? " · 🏠 Host" : ""}</div>
+            </div>`;
+    });
+    podium.style.display = "flex";
+
+    // ── Bar Chart (top 10) ──
+    const top10 = data.slice(0, 10);
+    new Chart(document.getElementById("probChart"), {
+        type: "bar",
+        data: {
+            labels: top10.map(t => (flagMap[t.team] || "") + " " + t.team),
+            datasets: [{
+                label: "Win Probability %",
+                data: top10.map(t => t.win_probability),
+                backgroundColor: top10.map((_, i) =>
+                    i === 0 ? "#f4c430" : i < 3 ? "#e89030" : "#2a4a7f"),
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: "#aaa" }, grid: { color: "#1e3a5f" } },
+                y: { ticks: { color: "#aaa" }, grid: { color: "#1e3a5f" } }
+            }
+        }
+    });
+    document.getElementById("chartBox").style.display = "block";
+
+    // ── Full Table ──
+    const tbody = document.getElementById("tableBody");
+    const maxP  = data[0].win_probability;
+    data.forEach((t, i) => {
+        const barW = Math.round((t.win_probability / maxP) * 120);
+        tbody.innerHTML += `
+            <tr>
+                <td class="rank-num">${i + 1}</td>
+                <td class="team-name">
+                    ${flagMap[t.team] || "🏳"} ${t.team}
+                    ${t.host_2026 ? '<span class="host-badge">Host</span>' : ""}
+                </td>
+                <td>${t.confederation}</td>
+                <td>${t.wc_wins}</td>
+                <td>${t.fifa_rank}</td>
+                <td>
+                    <div class="prob-bar-wrap">
+                        <div class="prob-bar" style="width:${barW}px"></div>
+                        <span class="prob-text">${t.win_probability}%</span>
+                    </div>
+                </td>
+            </tr>`;
+    });
+    document.getElementById("tableBox").style.display = "block";
+}
+
+loadPredictions();
+</script>
+</body>
+</html>

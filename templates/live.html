@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Tracker | WC Predictor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0a0e1a;
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        nav {
+            background: #111827;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #1e3a5f;
+        }
+
+        nav .logo { font-size: 1.4rem; font-weight: 700; color: #f4c430; }
+        nav a { color: #ccc; text-decoration: none; margin-left: 2rem; font-size: 0.95rem; }
+        nav a:hover { color: #f4c430; }
+
+        .page-header {
+            text-align: center;
+            padding: 3rem 2rem 1.5rem;
+        }
+
+        .page-header h1 { font-size: 2rem; color: #f4c430; margin-bottom: 0.5rem; }
+        .page-header p  { color: #889; font-size: 0.95rem; }
+
+        .refresh-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn-refresh {
+            background: #f4c430;
+            color: #0a0e1a;
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-refresh:hover { background: #e6b820; }
+        .last-updated { font-size: 0.8rem; color: #667; }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem 4rem; }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.6rem 1.4rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 1px solid #1e3a5f;
+            background: transparent;
+            color: #aaa;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: #f4c430;
+            color: #0a0e1a;
+            font-weight: 600;
+            border-color: #f4c430;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Groups grid */
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.2rem;
+        }
+
+        .group-card {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .group-title {
+            background: #0d1525;
+            padding: 0.6rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #f4c430;
+            border-bottom: 1px solid #1e3a5f;
+        }
+
+        .group-table { width: 100%; border-collapse: collapse; }
+
+        .group-table th {
+            padding: 0.4rem 0.6rem;
+            font-size: 0.7rem;
+            color: #667;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .group-table th:first-child { text-align: left; }
+
+        .group-table td {
+            padding: 0.45rem 0.6rem;
+            font-size: 0.82rem;
+            text-align: center;
+            border-top: 1px solid #1a2535;
+        }
+
+        .group-table td:first-child { text-align: left; }
+        .group-table tr:nth-child(1) td,
+        .group-table tr:nth-child(2) td { color: #7ab3f0; }
+        .group-table .pts { font-weight: 700; color: #f4c430; }
+        .advance-line {
+            border-top: 2px solid #2a5a2a !important;
+        }
+
+        /* Matches list */
+        .matches-section { margin-bottom: 2rem; }
+        .matches-section h2 {
+            font-size: 1rem;
+            color: #f4c430;
+            margin-bottom: 0.8rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #1e3a5f;
+        }
+
+        .match-card {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 10px;
+            padding: 0.8rem 1.2rem;
+            margin-bottom: 0.6rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: border-color 0.2s;
+        }
+
+        .match-card:hover { border-color: #f4c430; }
+        .match-card.live-now { border-color: #e05; animation: pulse 2s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { border-color: #e05; }
+            50%       { border-color: #f4c430; }
+        }
+
+        .match-teams {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            flex: 1;
+        }
+
+        .team-name { font-size: 0.9rem; font-weight: 500; min-width: 130px; }
+        .team-name.home { text-align: right; }
+
+        .score-box {
+            background: #0d1525;
+            border-radius: 6px;
+            padding: 0.3rem 0.8rem;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f4c430;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .match-meta {
+            font-size: 0.75rem;
+            color: #667;
+            text-align: right;
+            min-width: 100px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .status-FINISHED     { background: #1a3a1a; color: #4a9; }
+        .status-IN_PLAY      { background: #3a0020; color: #f05; }
+        .status-SCHEDULED    { background: #1a2535; color: #667; }
+        .status-TIMED        { background: #1a2535; color: #667; }
+
+        .loading { text-align: center; padding: 3rem; color: #667; }
+
+        @media (max-width: 800px) {
+            .groups-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 500px) {
+            .groups-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Simulation odds */
+        .sim-card {
+            background: #111827;
+            border: 1px solid #1e3a5f;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .sim-card .group-title {
+            background: #0d1525;
+            padding: 0.6rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #f4c430;
+            border-bottom: 1px solid #1e3a5f;
+        }
+
+        .sim-row {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #1a2535;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .sim-row:last-child { border-bottom: none; }
+
+        .sim-row-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .sim-pct {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .sim-pct.high { color: #4a9; }
+        .sim-pct.medium { color: #f4c430; }
+        .sim-pct.low { color: #e05; }
+
+        .sim-bar-bg {
+            height: 5px;
+            background: #1a2535;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .sim-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #1e3a5f, #f4c430);
+            transition: width 0.6s ease;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <span class="logo">⚽ WC2026 Predictor</span>
+    <div>
+        <a href="/">Home</a>
+        <a href="/predictions">Predictions</a>
+        <a href="/history">History</a>
+        <a href="/live">Live Tracker</a>
+    </div>
+</nav>
+
+<div class="page-header">
+    <h1>📡 Live Match Tracker</h1>
+    <p>Real-time 2026 World Cup standings and results</p>
+</div>
+
+<div class="refresh-bar">
+    <button class="btn-refresh" onclick="refreshData()">🔄 Refresh Data</button>
+    <span class="last-updated" id="lastUpdated">—</span>
+</div>
+
+<div class="container">
+    <div id="loading" class="loading">Loading live data...</div>
+
+    <div id="mainContent" style="display:none">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('groups')">🏟 Group Standings</button>
+            <button class="tab" onclick="switchTab('matches')">⚽ Match Results</button>
+            <button class="tab" onclick="switchTab('simulate')">🎲 Advancement Odds</button>
+        </div>
+
+        <!-- Groups Tab -->
+        <div class="tab-content active" id="tab-groups">
+            <div class="groups-grid" id="groupsGrid"></div>
+        </div>
+
+        <!-- Matches Tab -->
+        <div class="tab-content" id="tab-matches">
+            <div id="matchesList"></div>
+        </div>
+
+        <!-- Simulation Tab -->
+        <div class="tab-content" id="tab-simulate">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                <p style="color:#889;font-size:0.85rem">Based on 10,000 simulated tournaments using current standings</p>
+                <button class="btn-refresh" onclick="runSimulation()" id="simBtn">🎲 Re-run Simulation</button>
+            </div>
+            <div class="groups-grid" id="simGrid"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+const flagMap = {
+    "Argentina":"🇦🇷","Brazil":"🇧🇷","France":"🇫🇷","Germany":"🇩🇪","Spain":"🇪🇸",
+    "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Netherlands":"🇳🇱","Portugal":"🇵🇹","Italy":"🇮🇹","Belgium":"🇧🇪",
+    "Croatia":"🇭🇷","Uruguay":"🇺🇾","Colombia":"🇨🇴","Mexico":"🇲🇽","United States":"🇺🇸",
+    "Canada":"🇨🇦","Japan":"🇯🇵","Korea Republic":"🇰🇷","Morocco":"🇲🇦","Senegal":"🇸🇳",
+    "Denmark":"🇩🇰","Switzerland":"🇨🇭","Poland":"🇵🇱","Serbia":"🇷🇸","Austria":"🇦🇹",
+    "Ecuador":"🇪🇨","Chile":"🇨🇱","Iran":"🇮🇷","Australia":"🇦🇺","Nigeria":"🇳🇬",
+    "Egypt":"🇪🇬","Saudi Arabia":"🇸🇦","Costa Rica":"🇨🇷","Paraguay":"🇵🇾",
+    "Venezuela":"🇻🇪","Bolivia":"🇧🇴","Peru":"🇵🇪","Jamaica":"🇯🇲","Panama":"🇵🇦",
+    "Honduras":"🇭🇳","Uzbekistan":"🇺🇿","Hungary":"🇭🇺","Romania":"🇷🇴","Albania":"🇦🇱",
+    "Slovakia":"🇸🇰","Greece":"🇬🇷","Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Czech Republic":"🇨🇿",
+    "Turkey":"🇹🇷","South Korea":"🇰🇷","USA":"🇺🇸"
+};
+
+function flag(name) { return flagMap[name] || "🏳"; }
+
+function switchTab(name) {
+    document.querySelectorAll(".tab").forEach((t, i) => {
+        t.classList.toggle("active", ["groups","matches"][i] === name);
+    });
+    document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+    document.getElementById("tab-" + name).classList.add("active");
+}
+
+async function loadData() {
+    const [standRes, matchRes] = await Promise.all([
+        fetch("/api/live/standings"),
+        fetch("/api/live/matches")
+    ]);
+    const standings = await standRes.json();
+    const matches   = await matchRes.json();
+
+    document.getElementById("loading").style.display      = "none";
+    document.getElementById("mainContent").style.display  = "block";
+    document.getElementById("lastUpdated").textContent    =
+        "Last updated: " + new Date().toLocaleTimeString();
+
+    renderGroups(standings);
+    renderMatches(matches);
+}
+
+function renderGroups(standings) {
+    if (!standings.length) {
+        document.getElementById("groupsGrid").innerHTML =
+            "<p style='color:#667;grid-column:span 3'>No standings data yet — check back when the tournament starts!</p>";
+        return;
+    }
+
+    const groups = {};
+    standings.forEach(row => {
+        if (!groups[row.group_name]) groups[row.group_name] = [];
+        groups[row.group_name].push(row);
+    });
+
+    const grid = document.getElementById("groupsGrid");
+    grid.innerHTML = "";
+
+    Object.entries(groups).forEach(([name, teams]) => {
+        const label = name.replace("GROUP_", "Group ");
+        let rows = "";
+        teams.forEach((t, i) => {
+            const advClass = i === 2 ? "advance-line" : "";
+            rows += `
+                <tr>
+                    <td class="${advClass}">${flag(t.team)} ${t.team}</td>
+                    <td class="${advClass}">${t.played}</td>
+                    <td class="${advClass}">${t.won}</td>
+                    <td class="${advClass}">${t.drawn}</td>
+                    <td class="${advClass}">${t.lost}</td>
+                    <td class="${advClass}">${t.goal_diff > 0 ? "+" : ""}${t.goal_diff}</td>
+                    <td class="${advClass} pts">${t.points}</td>
+                </tr>`;
+        });
+
+        grid.innerHTML += `
+            <div class="group-card">
+                <div class="group-title">⚽ ${label}</div>
+                <table class="group-table">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>P</th><th>W</th><th>D</th><th>L</th>
+                            <th>GD</th><th>Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    });
+}
+
+function renderMatches(matches) {
+    if (!matches.length) {
+        document.getElementById("matchesList").innerHTML =
+            "<p style='color:#667'>No match data yet — check back when the tournament starts!</p>";
+        return;
+    }
+
+    // Group by matchday
+    const days = {};
+    matches.forEach(m => {
+        const key = m.stage === "GROUP_STAGE"
+            ? `Matchday ${m.matchday}`
+            : m.stage.replace(/_/g, " ");
+        if (!days[key]) days[key] = [];
+        days[key].push(m);
+    });
+
+    const list = document.getElementById("matchesList");
+    list.innerHTML = "";
+
+    Object.entries(days).forEach(([day, ms]) => {
+        let cards = "";
+        ms.forEach(m => {
+            const isLive  = m.status === "IN_PLAY";
+            const isDone  = m.status === "FINISHED";
+            const score   = isDone || isLive
+                ? `${m.home_score ?? 0} - ${m.away_score ?? 0}`
+                : "vs";
+            const dateStr = new Date(m.utc_date).toLocaleDateString("en-GB",
+                { weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" });
+
+            cards += `
+                <div class="match-card ${isLive ? "live-now" : ""}">
+                    <div class="match-teams">
+                        <div class="team-name home">${flag(m.home_team)} ${m.home_team}</div>
+                        <div class="score-box">${score}</div>
+                        <div class="team-name">${flag(m.away_team)} ${m.away_team}</div>
+                    </div>
+                    <div class="match-meta">
+                        <div class="status-badge status-${m.status}">
+                            ${isLive ? "🔴 LIVE" : m.status}
+                        </div>
+                        <div>${dateStr}</div>
+                    </div>
+                </div>`;
+        });
+
+        list.innerHTML += `
+            <div class="matches-section">
+                <h2>${day}</h2>
+                ${cards}
+            </div>`;
+    });
+}
+
+async function refreshData() {
+    document.getElementById("lastUpdated").textContent = "Refreshing...";
+    await fetch("/api/live/refresh");
+    await loadData();
+}
+
+async function loadSimulation() {
+    const res  = await fetch("/api/live/simulation");
+    const data = await res.json();
+
+    const grid = document.getElementById("simGrid");
+    grid.innerHTML = "";
+
+    if (!data.length) {
+        grid.innerHTML = "<p style='color:#667;grid-column:span 3'>No simulation data yet. Click Re-run Simulation!</p>";
+        return;
+    }
+
+    const groups = {};
+    data.forEach(r => {
+        if (!groups[r.group_name]) groups[r.group_name] = [];
+        groups[r.group_name].push(r);
+    });
+
+    Object.entries(groups).forEach(([name, teams]) => {
+        let rows = "";
+        teams.forEach(t => {
+            const pct      = t.advance_pct;
+            const pctClass = pct >= 70 ? "high" : pct >= 40 ? "medium" : "low";
+            rows += `
+                <div class="sim-row">
+                    <div class="sim-row-top">
+                        <span>${flag(t.team)} ${t.team}</span>
+                        <span class="sim-pct ${pctClass}">${pct}%</span>
+                    </div>
+                    <div class="sim-bar-bg">
+                        <div class="sim-bar-fill" style="width:${pct}%"></div>
+                    </div>
+                    <div style="font-size:0.72rem;color:#556">
+                        Win group: ${t.win_group_pct}% · Pts: ${t.points} · GD: ${t.goal_diff > 0 ? "+" : ""}${t.goal_diff}
+                    </div>
+                </div>`;
+        });
+
+        grid.innerHTML += `
+            <div class="sim-card">
+                <div class="group-title">⚽ ${name}</div>
+                ${rows}
+            </div>`;
+    });
+}
+
+async function runSimulation() {
+    const btn = document.getElementById("simBtn");
+    btn.textContent = "⏳ Running 10,000 simulations...";
+    btn.disabled    = true;
+    await fetch("/api/live/simulate");
+    await loadSimulation();
+    btn.textContent = "🎲 Re-run Simulation";
+    btn.disabled    = false;
+}
+
+function switchTab(name) {
+    const names = ["groups", "matches", "simulate"];
+    document.querySelectorAll(".tab").forEach((t, i) => {
+        t.classList.toggle("active", names[i] === name);
+    });
+    document.querySelectorAll(".tab-content").forEach(t => t.classList.remove("active"));
+    document.getElementById("tab-" + name).classList.add("active");
+    if (name === "simulate") loadSimulation();
+}
+
+// Auto refresh every 60 seconds
+loadData();
+setInterval(loadData, 60000);
+</script>
+</body>
+</html>
