@@ -133,15 +133,18 @@
             color: #667;
         }
     </style>
+    <link rel="stylesheet" href="/static/css/mobile.css">
 </head>
 <body>
 
 <nav>
-    <span class="logo">⚽ WC2026 Predictor</span>
-    <div>
+    <button class="hamburger" onclick="toggleNav()">
+        <span></span><span></span><span></span>
+    </button>
+    <div class="nav-links" id="navLinks">
         <a href="/">Home</a>
         <a href="/predictions">Predictions</a>
-        <a href="/history">History</a>
+         <a href="/history">History</a>
         <a href="/live">Live Tracker</a>
     </div>
 </nav>
@@ -272,6 +275,11 @@ async function loadPredictions() {
 }
 
 loadPredictions();
+</script>
+<script>
+function toggleNav() {
+    document.getElementById("navLinks").classList.toggle("open");
+}
 </script>
 </body>
 </html>
